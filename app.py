@@ -159,8 +159,8 @@ if st.session_state.is_running and video_path and model_path:
             w_orig = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             h_orig = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
             
-            # Giữ nguyên kích thước gốc của video (không lật ngang)
-            w_new, h_new = w_orig, h_orig
+            # Theo logic của main_new.py (xoay dọc video ngang thành đứng)
+            w_new, h_new = h_orig, w_orig
             
             # Khởi tạo Vùng đếm ROI
             ROI_POINTS = [
@@ -185,6 +185,9 @@ if st.session_state.is_running and video_path and model_path:
                     break
                 
                 start_time = time.time()
+                
+                # Tiền xử lý: xoay video như trong notebook để mô hình nhận diện chuẩn xác
+                frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
                 
                 # Tracking
                 result = detector.track(frame)
@@ -244,14 +247,15 @@ if st.session_state.is_running and video_path and model_path:
                 total_metric.metric("🚗 Tổng xe đi qua", f"{total_current}")
                 time_metric.metric("⏱️ Độ trễ (ms/frame)", f"{process_time*1000:.1f} ms")
                 
-                # Giảm độ phân giải ảnh trước khi gửi lên Web để tránh đơ trình duyệt
-                frame_resized = cv2.resize(frame_rgb, (800, int(800 * h_new / w_new)))
-                video_placeholder.image(frame_resized, channels="RGB", use_container_width=True)
-                
-                # Cập nhật Biểu đồ và Log mỗi 10 frame để tránh nghẽn websocket (làm đơ giao diện)
+                # Cập nhật Biểu đồ và Log mỗi 10 frame để tránh nghẽn websocket
                 if 'frame_count' not in locals():
                     frame_count = 0
                 frame_count += 1
+                
+                # Chỉ hiển thị hình ảnh mỗi 2 frame (khoảng 15 FPS) để mạng Internet tải kịp
+                if frame_count % 2 == 0:
+                    frame_resized = cv2.resize(frame_rgb, (800, int(800 * h_new / w_new)))
+                    video_placeholder.image(frame_resized, channels="RGB", use_container_width=True)
                 
                 if frame_count % 10 == 0:
                     # Cập nhật Biểu đồ (Dùng bar_chart chuẩn để chống lỗi Plotly)
