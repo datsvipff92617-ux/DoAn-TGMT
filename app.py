@@ -159,8 +159,8 @@ if st.session_state.is_running and video_path and model_path:
             w_orig = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             h_orig = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
             
-            # Theo logic của main_new.py (xoay dọc video ngang thành đứng)
-            w_new, h_new = h_orig, w_orig
+            # Giữ nguyên kích thước gốc của video (không lật ngang)
+            w_new, h_new = w_orig, h_orig
             
             # Khởi tạo Vùng đếm ROI
             ROI_POINTS = [
@@ -185,9 +185,6 @@ if st.session_state.is_running and video_path and model_path:
                     break
                 
                 start_time = time.time()
-                
-                # Tiền xử lý: xoay video như trong notebook
-                frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
                 
                 # Tracking
                 result = detector.track(frame)
