@@ -255,8 +255,10 @@ if st.session_state.is_running and video_path and model_path:
                     frame_count = 0
                 frame_count += 1
                 
-                # Cập nhật UI hình ảnh siêu mượt (30fps hoặc 15fps tùy máy)
-                if frame_count % 2 == 0:
+                # Cập nhật UI hình ảnh tùy theo chế độ Cloud hay Local
+                frame_skip = 10 if cloud_mode else 2
+                
+                if frame_count % frame_skip == 0:
                     video_placeholder.image(frame_rgb, channels="RGB", use_container_width=True)
                 
                 # Cập nhật Thống kê mỗi 10 frame để giao diện không bị treo
