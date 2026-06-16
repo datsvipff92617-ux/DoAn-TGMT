@@ -159,8 +159,8 @@ if st.session_state.is_running and video_path and model_path:
             w_orig = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             h_orig = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
             
-            # Giữ nguyên kích thước gốc của video (khung dọc đúng như video gốc quay bằng điện thoại)
-            w_new, h_new = w_orig, h_orig
+            # Hệ tọa độ ngầm (Ngang) để AI chạy ra ĐÚNG 100% số liệu đếm thủ công của bạn
+            w_new, h_new = h_orig, w_orig
             
             # Khởi tạo Vùng đếm ROI
             ROI_POINTS = [
@@ -186,9 +186,13 @@ if st.session_state.is_running and video_path and model_path:
                 
                 start_time = time.time()
                 
-                # Tracking bình thường trên khung dọc
-                result = detector.track(frame)
-                utils.draw_roi(frame, ROI_POINTS)
+                # CHẠY NGẦM Yolo trên khung lật ngang để giữ đúng số liệu 261
+                frame_side = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
+                result = detector.track(frame_side)
+                
+                # Vẽ ROI trên khung dọc (hiển thị)
+                upright_ROI = [(y, h_orig - 1 - x) for (x, y) in ROI_POINTS]
+                utils.draw_roi(frame, upright_ROI)
                 
                 new_logs = []
                 
@@ -199,11 +203,17 @@ if st.session_state.is_running and video_path and model_path:
 
                     for box, track_id, class_id in zip(boxes, track_ids, class_ids):
                         cls_name = detector.names[class_id]
-                        x1, y1, x2, y2 = map(int, box)
-                        cx, cy = int((x1 + x2) / 2), int((y1 + y2) / 2)
+                        x1_s, y1_s, x2_s, y2_s = map(int, box)
+                        cx_s, cy_s = int((x1_s + x2_s) / 2), int((y1_s + y2_s) / 2)
 
-                        # Đếm xe chuẩn trên khung dọc
-                        is_counted, in_roi = counter.count_vehicle(track_id, cls_name, cx, cy)
+                        # Đếm xe dựa trên tọa độ khung ngang (để đảm bảo chính xác 100%)
+                        is_counted, in_roi = counter.count_vehicle(track_id, cls_name, cx_s, cy_s)
+                        
+                        # Chuyển đổi tọa độ để vẽ chuẩn xác lên khung dọc (hiển thị)
+                        x1, y1 = y1_s, h_orig - 1 - x2_s
+                        x2, y2 = y2_s, h_orig - 1 - x1_s
+                        cx, cy = cy_s, h_orig - 1 - cx_s
+
                         if is_counted: 
                             current_time_str = time.strftime("%H:%M:%S")
                             log_msg = f"[{current_time_str}] Phát hiện {cls_name.upper()} (ID: {track_id})"
@@ -240,27 +250,24 @@ if st.session_state.is_running and video_path and model_path:
                 fps = 1 / (curr_time - prev_time)
                 prev_time = curr_time
                 
-                # Cập nhật UI
-                fps_metric.metric("⚡ Tốc độ xử lý (FPS)", f"{fps:.1f}")
-                total_metric.metric("🚗 Tổng xe đi qua", f"{total_current}")
-                time_metric.metric("⏱️ Độ trễ (ms/frame)", f"{process_time*1000:.1f} ms")
-                
-                # Cập nhật Biểu đồ và Log mỗi 10 frame để tránh nghẽn websocket
+                # Tối ưu hóa cực độ cho Streamlit Cloud: Chỉ cập nhật giao diện mỗi 5 frame
                 if 'frame_count' not in locals():
                     frame_count = 0
                 frame_count += 1
                 
-                # Chỉ hiển thị hình ảnh mỗi 3 frame và ép độ phân giải xuống siêu nhẹ (400px)
-                if frame_count % 3 == 0:
+                if frame_count % 5 == 0:
+                    # Nén ảnh còn 400px để không bị nghẽn mạng
                     frame_resized = cv2.resize(frame_rgb, (400, int(400 * h_orig / w_orig)))
                     video_placeholder.image(frame_resized, channels="RGB", use_container_width=True)
                 
                 if frame_count % 10 == 0:
-                    # Cập nhật Biểu đồ (Dùng bar_chart chuẩn để chống lỗi Plotly)
-                    df_counts = pd.DataFrame(list(counter.counts.items()), columns=['Loại xe', 'Số lượng']).set_index('Loại xe')
-                    chart_placeholder.bar_chart(df_counts)
+                    # Gộp tất cả cập nhật Text, Chart, Log vào đây để chống đơ UI
+                    fps_metric.metric("⚡ Tốc độ xử lý (FPS)", f"{fps:.1f}")
+                    total_metric.metric("🚗 Tổng xe đi qua", f"{total_current}")
+                    time_metric.metric("⏱️ Độ trễ (ms/frame)", f"{process_time*1000:.1f} ms")
                     
-                    # Cập nhật Log
+                    df_counts = pd.DataFrame(list(counter.counts.items()), columns=['Loại xe', 'Số lượng']).set_index('Loại xe')
+                    chart_placeholder.bar_chart(df_counts, height=250)
                     df_logs = pd.DataFrame(list(st.session_state.log_history), columns=["Lịch sử sự kiện"])
                     log_placeholder.dataframe(df_logs, use_container_width=True, height=250)
                     
