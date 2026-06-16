@@ -46,22 +46,31 @@ st.markdown("""
 st.markdown('<div class="main-header">📊 BÁO CÁO KẾT QUẢ GIÁM SÁT GIAO THÔNG (SHOWCASE)</div>', unsafe_allow_html=True)
 st.markdown("---")
 
-# ================= DỮ LIỆU CỐ ĐỊNH =================
-# Dữ liệu này được chốt sổ từ máy tính nội bộ
+# ================= DỮ LIỆU ĐỘNG TỪ TRANG CHỦ =================
+if 'counts' not in st.session_state or sum(st.session_state.counts.values()) == 0:
+    st.warning("⚠️ Chưa có dữ liệu phân tích! Vui lòng quay lại trang 'App' (Trang chủ) và nhấn BẮT ĐẦU CHẠY để hệ thống đếm xe, sau đó quay lại đây để xem báo cáo.")
+    st.stop()
+
+counts = st.session_state.counts
+
 DATA = {
     "Loại xe": ["Motorbike", "Car", "Truck", "Bus"],
-    "Số lượng": [262, 25, 5, 4],
+    "Số lượng": [counts.get("motorbike", 0), counts.get("car", 0), counts.get("truck", 0), counts.get("bus", 0)],
     "Màu sắc": ["#00d2ff", "#3a7bd5", "#f953c6", "#ff9966"]
 }
 df = pd.DataFrame(DATA)
 total_vehicles = df["Số lượng"].sum()
+
+if total_vehicles == 0:
+    st.warning("⚠️ Không phát hiện phương tiện nào trong video.")
+    st.stop()
 
 # ================= BỐ CỤC GIAO DIỆN =================
 col1, col2 = st.columns([1.5, 1])
 
 with col1:
     st.subheader("🎥 Băng Hình Phân Tích (Replay)")
-    st.markdown("Đoạn băng ghi hình quá trình AI bám sát và đếm lưu lượng phương tiện đi qua trạm kiểm soát.")
+    st.markdown("Đoạn băng ghi hình Demo minh họa quá trình AI bám sát và đếm lưu lượng phương tiện.")
     
     # Load video đã nén
     base_dir = os.path.dirname(os.path.dirname(__file__))
@@ -72,13 +81,16 @@ with col1:
     else:
         st.warning("Đang chờ tải video phân tích (file data/showcase_h264.mp4)...")
         
-    st.markdown("""
+    # Tính toán Insights tự động
+    motorbike_pct = counts.get("motorbike", 0) / total_vehicles * 100 if total_vehicles > 0 else 0
+    
+    st.markdown(f"""
         <div class="insight-box">
             <h4>💡 AI Insights (Phân tích tự động):</h4>
             <ul>
-                <li><b>Cảnh báo mật độ:</b> Lưu lượng xe máy vượt quá 88% tổng phương tiện, cho thấy đặc thù của giao thông đô thị nội khu.</li>
-                <li><b>Hoạt động vận tải:</b> Số lượng xe tải (5) và xe buýt (4) ở mức thấp, phù hợp với quy định hạn chế xe tải trọng lớn vào giờ cao điểm.</li>
-                <li><b>Độ chính xác:</b> Hệ thống YOLOv8n kết hợp thuật toán ByteTrack duy trì khả năng bám vết (tracking) liên tục trong điều kiện ánh sáng yếu, không xảy ra hiện tượng đếm sót xe trong vùng kiểm soát.</li>
+                <li><b>Cảnh báo mật độ:</b> Lưu lượng xe máy chiếm đến {motorbike_pct:.1f}% tổng phương tiện, cho thấy đặc thù rõ nét của giao thông đô thị nội khu.</li>
+                <li><b>Cập nhật Real-time:</b> Hệ thống vừa ghi nhận tổng cộng <b>{total_vehicles}</b> phương tiện trong phiên làm việc hiện tại của bạn.</li>
+                <li><b>Độ chính xác:</b> Hệ thống YOLOv8n kết hợp thuật toán ByteTrack duy trì khả năng bám vết (tracking) liên tục trong điều kiện ánh sáng thực tế.</li>
             </ul>
         </div>
     """, unsafe_allow_html=True)
@@ -90,10 +102,10 @@ with col2:
     m1, m2 = st.columns(2)
     m3, m4 = st.columns(2)
     
-    m1.metric("🏍️ Xe Máy (Motorbike)", "262", f"{262/total_vehicles*100:.1f}%")
-    m2.metric("🚗 Ô tô (Car)", "25", f"{25/total_vehicles*100:.1f}%")
-    m3.metric("🚚 Xe Tải (Truck)", "5", f"{5/total_vehicles*100:.1f}%")
-    m4.metric("🚌 Xe Buýt (Bus)", "4", f"{4/total_vehicles*100:.1f}%")
+    m1.metric("🏍️ Xe Máy (Motorbike)", f'{counts.get("motorbike", 0)}', f'{counts.get("motorbike", 0)/total_vehicles*100:.1f}%')
+    m2.metric("🚗 Ô tô (Car)", f'{counts.get("car", 0)}', f'{counts.get("car", 0)/total_vehicles*100:.1f}%')
+    m3.metric("🚚 Xe Tải (Truck)", f'{counts.get("truck", 0)}', f'{counts.get("truck", 0)/total_vehicles*100:.1f}%')
+    m4.metric("🚌 Xe Buýt (Bus)", f'{counts.get("bus", 0)}', f'{counts.get("bus", 0)/total_vehicles*100:.1f}%')
     
     st.markdown("---")
     
@@ -114,7 +126,7 @@ with col2:
         margin=dict(t=0, b=0, l=0, r=0)
     )
     st.plotly_chart(fig_pie, use_container_width=True)
-    
+
     # Biểu đồ cột
     st.subheader("Thống kê Chi tiết")
     fig_bar = px.bar(
@@ -136,4 +148,4 @@ with col2:
     st.plotly_chart(fig_bar, use_container_width=True)
 
 st.sidebar.markdown("---")
-st.sidebar.success("✅ Hệ thống đang chạy ở Chế độ Trình diễn (Showcase Mode). Số liệu được khóa cứng để đảm bảo tính ổn định cao nhất khi báo cáo.")
+st.sidebar.success("✅ Dữ liệu đang được đồng bộ trực tiếp từ kết quả phân tích AI.")
