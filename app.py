@@ -247,7 +247,9 @@ if st.session_state.is_running and video_path and model_path:
                 total_metric.metric("🚗 Tổng xe đi qua", f"{total_current}")
                 time_metric.metric("⏱️ Độ trễ (ms/frame)", f"{process_time*1000:.1f} ms")
                 
-                video_placeholder.image(frame_rgb, channels="RGB", use_container_width=True)
+                # Giảm độ phân giải ảnh trước khi gửi lên Web để tránh đơ trình duyệt
+                frame_resized = cv2.resize(frame_rgb, (800, int(800 * h_new / w_new)))
+                video_placeholder.image(frame_resized, channels="RGB", use_container_width=True)
                 
                 # Cập nhật Biểu đồ và Log mỗi 10 frame để tránh nghẽn websocket (làm đơ giao diện)
                 if 'frame_count' not in locals():
