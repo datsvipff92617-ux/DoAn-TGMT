@@ -159,8 +159,13 @@ if st.session_state.is_running and video_path and model_path:
             w_orig = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             h_orig = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
             
-            # Hệ tọa độ ngầm (Ngang) để AI chạy ra ĐÚNG 100% số liệu đếm thủ công của bạn
-            w_new, h_new = h_orig, w_orig
+            # Tự động xoay video nếu video gốc nằm ngang (như video_test.mp4)
+            if w_orig > h_orig:
+                w_new, h_new = h_orig, w_orig
+                needs_rotation = True
+            else:
+                w_new, h_new = w_orig, h_orig
+                needs_rotation = False
             
             # Khởi tạo Vùng đếm ROI
             ROI_POINTS = [
@@ -186,13 +191,13 @@ if st.session_state.is_running and video_path and model_path:
                 
                 start_time = time.time()
                 
-                # CHẠY NGẦM Yolo trên khung lật ngang để giữ đúng số liệu 261
-                frame_side = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
-                result = detector.track(frame_side)
                 
-                # Vẽ ROI trên khung dọc (hiển thị)
-                upright_ROI = [(y, h_orig - 1 - x) for (x, y) in ROI_POINTS]
-                utils.draw_roi(frame, upright_ROI)
+                # CHẠY Yolo: Tự động lật nếu video gốc bị ngang
+                if needs_rotation:
+                    frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
+                    
+                result = detector.track(frame)
+                utils.draw_roi(frame, ROI_POINTS)
                 
                 new_logs = []
                 
@@ -203,16 +208,11 @@ if st.session_state.is_running and video_path and model_path:
 
                     for box, track_id, class_id in zip(boxes, track_ids, class_ids):
                         cls_name = detector.names[class_id]
-                        x1_s, y1_s, x2_s, y2_s = map(int, box)
-                        cx_s, cy_s = int((x1_s + x2_s) / 2), int((y1_s + y2_s) / 2)
+                        x1, y1, x2, y2 = map(int, box)
+                        cx, cy = int((x1 + x2) / 2), int((y1 + y2) / 2)
 
-                        # Đếm xe dựa trên tọa độ khung ngang (để đảm bảo chính xác 100%)
-                        is_counted, in_roi = counter.count_vehicle(track_id, cls_name, cx_s, cy_s)
-                        
-                        # Chuyển đổi tọa độ để vẽ chuẩn xác lên khung dọc (hiển thị)
-                        x1, y1 = y1_s, h_orig - 1 - x2_s
-                        x2, y2 = y2_s, h_orig - 1 - x1_s
-                        cx, cy = cy_s, h_orig - 1 - cx_s
+                        # Đếm xe chuẩn
+                        is_counted, in_roi = counter.count_vehicle(track_id, cls_name, cx, cy)
 
                         if is_counted: 
                             current_time_str = time.strftime("%H:%M:%S")
@@ -257,7 +257,7 @@ if st.session_state.is_running and video_path and model_path:
                 
                 if frame_count % 5 == 0:
                     # Nén ảnh còn 400px để không bị nghẽn mạng
-                    frame_resized = cv2.resize(frame_rgb, (400, int(400 * h_orig / w_orig)))
+                    frame_resized = cv2.resize(frame_rgb, (400, int(400 * h_new / w_new)))
                     video_placeholder.image(frame_resized, channels="RGB", use_container_width=True)
                 
                 if frame_count % 10 == 0:
