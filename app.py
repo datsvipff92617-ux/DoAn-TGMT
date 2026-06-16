@@ -244,6 +244,9 @@ if st.session_state.is_running and video_path and model_path:
                     y_offset += 35
                     total_current += cnt
                 
+                # Lưu đếm xe vào Session State để trang Phân Tích đọc được
+                st.session_state.counts = counter.counts.copy()
+                
                 # Convert frame từ BGR (OpenCV) sang RGB (Streamlit)
                 frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 
