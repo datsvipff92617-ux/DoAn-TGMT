@@ -74,16 +74,16 @@ with st.sidebar:
     if not os.path.exists(default_model_v11): default_model_v11 = os.path.join(base_dir, "yolov11n_best.pt")
     
     model_choice = st.selectbox("Mô hình khả dụng:", [
-        "YOLO11n (Improved)",
-        "YOLOv8n (Improved)", 
+        "YOLOv8n (Improved)",
+        "YOLO11n (Improved)", 
         "Tùy chỉnh (Nhập đường dẫn)"
     ])
     
     model_path = ""
-    if model_choice == "YOLO11n (Improved)":
-        model_path = default_model_v11
-    elif model_choice == "YOLOv8n (Improved)":
+    if model_choice == "YOLOv8n (Improved)":
         model_path = default_model_v8
+    elif model_choice == "YOLO11n (Improved)":
+        model_path = default_model_v11
     else:
         model_path = st.text_input("Nhập đường dẫn file .pt:")
 
@@ -255,12 +255,12 @@ if st.session_state.is_running and video_path and model_path:
                     frame_count = 0
                 frame_count += 1
                 
+                # Cập nhật UI hình ảnh siêu mượt (30fps hoặc 15fps tùy máy)
+                if frame_count % 2 == 0:
+                    video_placeholder.image(frame_rgb, channels="RGB", use_container_width=True)
+                
+                # Cập nhật Thống kê mỗi 10 frame để giao diện không bị treo
                 if frame_count % 10 == 0:
-                    # Nén ảnh hiển thị xuống mức thấp (tránh lag tuyệt đối trên Streamlit)
-                    frame_resized = cv2.resize(frame_rgb, (400, int(400 * h_new / w_new)))
-                    video_placeholder.image(frame_resized, channels="RGB", use_container_width=True)
-                    
-                    # Gộp tất cả cập nhật Text, Chart, Log vào đây để chống đơ UI
                     fps_metric.metric("⚡ Tốc độ xử lý (FPS)", f"{fps:.1f}")
                     total_metric.metric("🚗 Tổng xe đi qua", f"{total_current}")
                     time_metric.metric("⏱️ Độ trễ (ms/frame)", f"{process_time*1000:.1f} ms")
