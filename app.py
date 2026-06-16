@@ -37,6 +37,9 @@ st.markdown("---")
 with st.sidebar:
     st.header("⚙️ Cài đặt Hệ thống")
     
+    cloud_mode = st.checkbox("☁️ Chế độ Đám mây (Chống giật Github)", value=True)
+    st.markdown("---")
+    
     # 1. Chọn Nguồn Video
     st.subheader("1. Nguồn Video")
     video_source = st.radio("Chọn nguồn:", ["Video Demo", "Tải video lên"])
