@@ -74,16 +74,16 @@ with st.sidebar:
     if not os.path.exists(default_model_v11): default_model_v11 = os.path.join(base_dir, "yolov11n_best.pt")
     
     model_choice = st.selectbox("Mô hình khả dụng:", [
-        "YOLOv8n (Improved)",
-        "YOLO11n (Improved)", 
+        "YOLO11n (Improved)",
+        "YOLOv8n (Improved)", 
         "Tùy chỉnh (Nhập đường dẫn)"
     ])
     
     model_path = ""
-    if model_choice == "YOLOv8n (Improved)":
-        model_path = default_model_v8
-    elif model_choice == "YOLO11n (Improved)":
+    if model_choice == "YOLO11n (Improved)":
         model_path = default_model_v11
+    elif model_choice == "YOLOv8n (Improved)":
+        model_path = default_model_v8
     else:
         model_path = st.text_input("Nhập đường dẫn file .pt:")
 
@@ -255,12 +255,11 @@ if st.session_state.is_running and video_path and model_path:
                     frame_count = 0
                 frame_count += 1
                 
-                if frame_count % 5 == 0:
-                    # Nén ảnh còn 400px để không bị nghẽn mạng
+                if frame_count % 10 == 0:
+                    # Nén ảnh hiển thị xuống mức thấp (tránh lag tuyệt đối trên Streamlit)
                     frame_resized = cv2.resize(frame_rgb, (400, int(400 * h_new / w_new)))
                     video_placeholder.image(frame_resized, channels="RGB", use_container_width=True)
-                
-                if frame_count % 10 == 0:
+                    
                     # Gộp tất cả cập nhật Text, Chart, Log vào đây để chống đơ UI
                     fps_metric.metric("⚡ Tốc độ xử lý (FPS)", f"{fps:.1f}")
                     total_metric.metric("🚗 Tổng xe đi qua", f"{total_current}")
