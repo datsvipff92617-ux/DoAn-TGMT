@@ -72,14 +72,21 @@ with col1:
     st.subheader("🎥 Băng Hình Phân Tích (Replay)")
     st.markdown("Đoạn băng ghi hình Demo minh họa quá trình AI bám sát và đếm lưu lượng phương tiện.")
     
-    # Load video đã nén
+    # Load video đã nén hoặc video hiện tại
     base_dir = os.path.dirname(os.path.dirname(__file__))
-    video_path = os.path.join(base_dir, "data", "showcase_h264.mp4")
+    video_path_data = os.path.join(base_dir, "data", "showcase_h264.mp4")
+    video_path_root = os.path.join(base_dir, "showcase_h264.mp4")
     
-    if os.path.exists(video_path):
-        st.video(video_path, format="video/mp4")
+    current_video = st.session_state.get('current_video', None)
+    
+    if current_video and os.path.exists(current_video):
+        st.video(current_video)
+    elif os.path.exists(video_path_data):
+        st.video(video_path_data, format="video/mp4")
+    elif os.path.exists(video_path_root):
+        st.video(video_path_root, format="video/mp4")
     else:
-        st.warning("Đang chờ tải video phân tích (file data/showcase_h264.mp4)...")
+        st.warning("Đang chờ tải video phân tích (xin hãy kiểm tra xem bạn đã up file showcase_h264.mp4 lên Github chưa)...")
         
     # Tính toán Insights tự động
     motorbike_pct = counts.get("motorbike", 0) / total_vehicles * 100 if total_vehicles > 0 else 0

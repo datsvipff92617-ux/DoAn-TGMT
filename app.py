@@ -115,6 +115,7 @@ with st.sidebar:
 
 if start_button:
     st.session_state.is_running = True
+    st.session_state.current_video = video_path
 if stop_button:
     st.session_state.is_running = False
 
